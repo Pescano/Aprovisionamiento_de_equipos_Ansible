@@ -1,0 +1,14 @@
+---
+- name: Instalación de aplicaciones para realizar el examen #nombre del Playbook
+  hosts: Linux #grupo de hosts a los que afectará
+  become: yes #habilitamos que las tareas se ejecuten como root
+  tasks: #lista de tareas
+    - name: Descargar Visual Studio Code #nombre de la tarea
+      get_url: #módulo para descargar vía url
+        url: "https://az764295.vo.msecnd.net/stable/b3e4e68a0bc097f0ae7907b217c1119af9e03435/code_1.78.2-1683731010_amd64.deb" #enlace obtenido de la página oficial de Visual Studio Code
+        dest: /tmp/vscode.deb #ubicación donde se almacenará en el host remoto
+
+    - name: Instalar Visual Studio Code
+      apt: #módulo que gestiona el gestor de paquetes
+        deb: /tmp/vscode.deb #deb permite manipular paquetes con formato .deb
+        state: present #estado deseado, en este caso que sea instalado

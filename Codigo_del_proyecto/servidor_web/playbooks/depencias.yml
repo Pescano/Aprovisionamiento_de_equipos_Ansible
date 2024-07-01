@@ -1,0 +1,19 @@
+---
+- name: Instalación de dependencias y actualización del sistema #nombre del Playbook
+  hosts: Linux #grupo de hosts a los que afectará
+  become: yes #habilitamos que las tareas se ejecuten como root
+  tasks: #lista de tareas
+    - name: Actualizar el sistema #nombre de la tarea
+      apt: #módulo que gestiona el gestor de paquetes
+        update_cache: yes #actualizamos la caché de las aplicaciones, equivalente a utilizar "apt update" en el terminal
+        upgrade: safe #aplicamos las actualizaciones de los paquetes pero solo nos limitamos a instalar las que sean seguras
+
+    - name: Instalar Python3.0
+      apt:
+        name: python3-pip #nombre del módulo a instalar
+        state: present #estado deseado, en este caso que sea instalado
+        
+    - name: Instalar PyMySQL
+      pip: #módulo para utilizar Phyton
+        name: pymysql
+        state: present

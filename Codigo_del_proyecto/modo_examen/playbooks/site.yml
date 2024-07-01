@@ -1,0 +1,33 @@
+---
+- name: Despliegue del modo site
+  hosts: Linux
+  become: yes
+
+  tasks:
+    - name: Obtener el ID del usuario exam
+      shell: id -u exam #obtiene el id del usuario exam
+      register: user_id #guarda el resultado en la variable user_id
+
+    - name: Cerrar sesión del usuario exam
+      shell: pkill -KILL -u {{ user_id.stdout }} #mata todos los procesos relacionado con el usuario exam cuyo id le pasamos como variable, esto cerrará su sesión si está activa
+      ignore_errors: yes #dado de que esta es una operación con potenciales errores le indicamos a Ansible que los ignore para que no pare su ejecución, sería equivalente a utilizar un try catch
+
+    - name: Obtener lista de usuarios
+      shell: 'awk -F: ''$3 >= 1000 && $1 != "root" {print $1}'' /etc/passwd'
+      register: user_list
+
+    - name: Desbloquear usuarios
+      shell: usermod --expiredate "" {{ item }} #misma operación que en exam pero al darle el valor "" elimina la caducidad y desbloquea la sesión
+      with_items: "{{ user_list.stdout_lines }}"
+
+    - name: Eliminar el usuario 'exam'
+      user:
+        name: exam 
+        state: absent #al utilizar el estado absent Ansible eliminará el usuario
+
+    - name: Habilitar el navegador Firefox
+      shell: mv /snap/bin/firefox.disabled /snap/bin/firefox #revertimos la el cambio de nombre del binario para habilitar firefox
+
+    - name: Reiniciar el sistema para aplicar la configuración
+      reboot:
+        msg: "Reiniciando el sistema por configuración del modo site"

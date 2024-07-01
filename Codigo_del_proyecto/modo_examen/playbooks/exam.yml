@@ -1,0 +1,34 @@
+---
+- name: Despliegue del modo examen
+  hosts: Linux
+  become: yes
+  tasks:
+    - name: Obtener lista de usuarios
+      shell: 'awk -F: ''$3 >= 1000 && $1 != "root" {print $1}'' /etc/passwd' #módulo que ejecuta un comando que filtra desde el fichero passwd todos los usuarios con uid mayor a 1000 que son los usuarios que creemos y los mostrará por pantalla
+      register: user_list #con register guardaremos el resultado del comando en una variable llamada user_list
+
+    - name: Bloquear usuarios
+      shell: usermod --expiredate 1 {{ item }} #ejecuta el comando de modificación de usuario para que expire en un día impidiendo que puedas acceder a él
+      with_items: "{{ user_list.stdout_lines }}" #indicamos a ansible que itere sobre la lista de resultado obtenida antes en este caso todos los usuarios
+
+    - name: Crear el usuario 'exam'
+      user: #módulo de gestión de usuarios
+        name: exam #nombre que queremos que tenga el usuario
+        password: "{{ 'exam' | password_hash('sha512') }}" #contraseña que tendrá el usuario junto con un cifrado 
+        create_home: yes #seleccionamos que se cree su carpeta de usuario 
+        shell: /bin/bash #especificamos qué tipo de shell usuaria que será bash
+
+    - name: Copiar archivo PDF al escritorio de 'exam'
+      copy: #módulo para copiar fichero del servidor a los host
+        src: /root/shell00.pdf    #Ruta del fichero en el servidor Ansible
+        dest: /home/exam/Desktop/   #Ruta al escritorio de 'exam'
+        owner: exam #nuevo dueño del fichero
+        group: exam #nuevo grupo del fichero
+        mode: '0644' #nuevos permisos del fichero
+
+    - name: Deshabilitar navegador Firefox
+      shell: mv /snap/bin/firefox /snap/bin/firefox.disabled #comando que renombra el binario de firefox para impedir su ejecución
+
+    - name: Reiniciar el sistema para aplicar la configuración
+      reboot: #módulo para reiniciar el equipo
+        msg: "Reiniciando el sistema por configuración del modo examen" #mensaje que emite Ansible antes de reiniciar el hosts

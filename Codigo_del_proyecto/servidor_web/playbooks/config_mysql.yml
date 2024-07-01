@@ -1,0 +1,60 @@
+---
+- name: Instalación de herramientas adicionales
+  hosts: Linux
+  become: yes
+  vars: #declaración de la variables que vamos a utilizar
+    - phpmyadmin_user: pablo
+    - phpmyadmin_password: Pablo-1234
+    - phpmyadmin_db_name: php_prueba
+  tasks:
+    - name: Descargar phpMyAdmin
+      get_url: #módulo para descargar vía url
+        url: https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.zip #link obtenido de la página oficial de phpMyAdmin
+        dest: /tmp/phpMyAdmin-5.2.1-all-languages.zip #ruta de la descarga
+
+    - name: Instalar unzip
+      apt: #descargamos e instalamos la herramienta unzip para descomprimir los ficheros .zip
+        name: unzip
+        state: present
+
+    - name: Descomprimir phpMyAdmin
+      unarchive: #módulo que utiliza unzip para descomprimir los ficheros .zip que señalemos en el src en el dest 
+        src: /tmp/phpMyAdmin-5.2.1-all-languages.zip
+        dest: /tmp/
+        remote_src: yes #utiliza el hosts remoto como el source en vez de el servidor Ansible
+
+    - name: Copiar phpMyAdmin
+      copy: #copiamos el archivos descomprimido en la ruta de destino del host remoto
+        src: /tmp/phpMyAdmin-5.2.1-all-languages/
+        dest: /var/www/html/phpmyadmin
+        remote_src: yes #utiliza el hosts remoto como el source en vez de el servidor Ansible
+
+    - name: Cambiar el propietario y el grupo de phpMyAdmin
+      file: #módulo para modificación de ficheros y directorios
+        path: /var/www/html/phpmyadmin #ruta donde queremos que se apliquen los cambios
+        state: directory #se asegura de crear todos los directorios indicados en la ruta
+        owner: pablo
+        group: pablo
+        recurse: yes # solo se usa cuando el state es directory, por defecto es false
+
+    - name: Crear la base de datos para phpMyAdmin
+      mysql_db: #módulo para interactuar con las bases de datos
+        name: "{{ phpmyadmin_db_name }}" #empleamos la variable definida anteriormente para darle nombre a la base de datos
+        state: present #indicamos que la base de datos esté presente con lo que el módulo utilizara código sql para crear la base de datos
+        login_unix_socket: /var/run/mysqld/mysqld.sock #esto especifica la ruta hacia el socket de conexión con mysql, esto permite que ansible establezca una conexión segura con mysql
+
+    - name: Importar la base de datos de phpMyAdmin
+      mysql_db: 
+        name: "{{ phpmyadmin_db_name }}"
+        state: import #importamos la base de datos que hemos creado anteriormente a phpMyAdmin
+        target: /var/www/html/phpmyadmin/sql/create_tables.sql #path donde vamos a realizar el dump de la base de datos
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Crear el usuario de phpMyAdmin
+      no_log: true #esto indica que los valores sensibles como las contraseñas no se guarden en los registros de ansible
+      mysql_user: #este módulo gestiona los usuarios en las bases de datos directamente
+        name: "{{ phpmyadmin_user }}" #nombre del usuario que vamos a crear
+        password: "{{ phpmyadmin_password }}" #contraseña que tendrá el usuario a crear
+        priv: "{{ phpmyadmin_db_name }}.*:ALL" #base de datos donde lo vamos a añadir con todos los privilegios sobre esa base de datos
+        state: present #aquí indica que se cree
+        login_unix_socket: /var/run/mysqld/mysqld.sock

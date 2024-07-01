@@ -1,0 +1,27 @@
+---
+- name: Instalación del servidor Web
+  hosts: Linux
+  become: yes
+  tasks: 
+    - name: Instalación de Apache
+      apt:
+        name: apache2
+        state: present
+
+    - name: Instalación de MySQL server
+      apt:
+        name: mysql-server
+        state: present
+
+    - name: Instalación de PHP con los módulos necesarios
+      apt: 
+        name: #con esta sintaxis permitimos que el gestor de paquetes instale simultáneamente varios paquetes
+          - php
+          - php-mysql
+          - libapache2-mod-php
+        state: present
+
+    - name: Reiniciar Apache
+      service: #módulo que modifica el estado de los servicios del sistema
+        name: apache2 #nombre del servicio que se va a ver afectado
+        state: restarted #indicamos que se reinicie el servicio
